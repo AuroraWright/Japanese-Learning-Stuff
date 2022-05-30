@@ -1,0 +1,9 @@
+{
+    "RTKDeckName": "RTK",
+    "keywordFieldName": "Keyword",
+    "kanjiFieldName": "Kanji", 
+    "generalConfirmEmpty": true,
+    "generalHotkey": "Alt+Shift+D",
+    "snippetsExcludedFields": ["Note ID", "ID (hidden)"],
+    "snippetsResultsWarnLimit": 1000
+}
