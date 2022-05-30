@@ -24,7 +24,7 @@ else
 	tell application id (id of application appName) to activate
 	tell application "System Events" to keystroke tab
 	do shell script "echo '' > /tmp/ffmpeg_stop"
-	do shell script "</tmp/ffmpeg_stop /opt/homebrew/bin/ffmpeg -f avfoundation -i ':Windows' -c:a aac_at -aac_at_mode vbr -q:a 10 -f ipod " & quoted form of filename & "> /dev/null 2>&1 &"
+	do shell script "</tmp/ffmpeg_stop /opt/homebrew/bin/ffmpeg -f avfoundation -i ':Windows' -c:a aac_at -aac_at_mode vbr -q:a 8 -f ipod " & quoted form of filename & "> /dev/null 2>&1 &"
 	tell application "System Events"
 		repeat
 			if exists file filename then
