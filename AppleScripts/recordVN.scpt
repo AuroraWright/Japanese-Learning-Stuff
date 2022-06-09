@@ -17,7 +17,16 @@ if ffmpeg_running then
 	do shell script "echo q >> /tmp/ffmpeg_stop"
 	set recordingsFolder to "/tmp"
 	set audioFileName to (do shell script "cd " & quoted form of recordingsFolder & " && ls -ltr -A1 | grep m4a | tail -1")
+	repeat
+		try
+			do shell script "/usr/bin/pgrep -q ffmpeg"
+			delay 0.2
+			on error
+				exit repeat			
+		end try
+	end repeat
 	set the clipboard to POSIX file (recordingsFolder & "/" & audioFileName)
+	beep 2
 else
 	set formattedDate to (do shell script "date +'%Y-%m-%d-%H.%M.%S'")
 	set filename to "/tmp/recording-" & formattedDate & ".m4a"
