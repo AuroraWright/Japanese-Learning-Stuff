@@ -1,5 +1,3 @@
-set {x, y, w, h} to {1, 384, 1025, 578}
-
 set appName to "Parallels Desktop"
 if application appName is not running then
 	return
@@ -9,33 +7,45 @@ if application appName is not running then
 	return
 end if
 
-screencapture(x, y, w, h)
+screencapture()
 
 tell application "System Events"
 	tell process appName to set frontmost to true
 	keystroke "r" using {command down}
 end tell
 
-on screencapture(x, y, w, h)
-	set args to ""
-	repeat with a in {x, y, w, h}
-		set args to args & space & ("" & a)'s quoted form
-	end repeat
-	do shell script "/opt/homebrew/bin/python3 <<'EOF' - " & args & "
+on screencapture()
+	do shell script "/opt/homebrew/bin/python3 <<'EOF' - 
 
-import sys, os
+import sys, os, configparser
 import Quartz.CoreGraphics as CoreGraphics
 from AppKit import NSPasteboard, NSArray, NSImage
 
-def usage():
-    sys.stderr.write('Usage: %s x y w h\\n' % os.path.basename(sys.argv[0]))
-    sys.exit(1)
-
 def main():
-    if not len(sys.argv) == 5: usage()
-    x, y, w, h = [ float(a) for a in sys.argv[1:5] ]
-    
-    img = CoreGraphics.CGDisplayCreateImageForRect(CoreGraphics.CGMainDisplayID(), CoreGraphics.CGRectMake(x, y, w, h))
+    home_path = os.path.expanduser('~')
+    config_path = os.path.join(home_path,'.config','vnscreenshotscript.ini')
+    config = configparser.ConfigParser()
+    config.read(config_path)
+
+    if config['config']['second_screen'] == 'true':
+        (err, online_displays, number_of_online_displays) = CoreGraphics.CGGetActiveDisplayList(2, None, None)
+        if number_of_online_displays == 2:
+            if online_displays[0] == CoreGraphics.CGMainDisplayID():
+                display_id = online_displays[1]
+            else:
+                display_id = online_displays[0]
+        else:
+            sys.exit(1)
+    else:
+        display_id = CoreGraphics.CGMainDisplayID()
+
+    if config['config']['whole_screen'] == 'true':
+        img = CoreGraphics.CGDisplayCreateImage(display_id)
+    else:
+        coords = config['config']['rectangle_coords']
+        x, y, w, h = [float(x) for x in coords.split(' ')]
+        img = CoreGraphics.CGDisplayCreateImageForRect(display_id, CoreGraphics.CGRectMake(x, y, w, h))
+
     brep = NSImage.alloc().initWithCGImage_(img)
     pb = NSPasteboard.generalPasteboard()
     pb.clearContents()
