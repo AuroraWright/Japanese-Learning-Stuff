@@ -33,9 +33,9 @@ if ffmpeg_running then
 	end repeat
 	tell application id (id of application appName2) to activate
 	tell application "System Events"
-        key down keyCode2
-        delay keyCodeInterval
-        key up keyCode2
+		key down keyCode2
+		delay keyCodeInterval
+		key up keyCode2
 	end tell
 	set the clipboard to POSIX file (recordingsFolder & "/" & audioFileName)
 	tell application id (id of application appName) to activate
@@ -45,9 +45,9 @@ else
 	set filename to "/tmp/recording-" & formattedDate & ".m4a"
 	tell application id (id of application appName2) to activate
 	tell application "System Events"
-        key down keyCode1
-        delay keyCodeInterval
-        key up keyCode1
+		key down keyCode1
+		delay keyCodeInterval
+		key up keyCode1
 	end tell
 	do shell script "echo '' > /tmp/ffmpeg_stop"
 	do shell script "</tmp/ffmpeg_stop /opt/homebrew/bin/ffmpeg -f avfoundation -i ':Windows' -c:a aac_at -aac_at_mode vbr -q:a 8 -f ipod " & quoted form of filename & "> /dev/null 2>&1 &"
