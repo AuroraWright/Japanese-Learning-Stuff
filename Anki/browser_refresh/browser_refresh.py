@@ -49,7 +49,7 @@ def debug(t):
 def refreshView(self):
     debug("Calling refreshView()")
     if anki21:
-        self.onSearchActivated()
+        self._default_search()
     else:
         self.onSearch(reset=True)
 
