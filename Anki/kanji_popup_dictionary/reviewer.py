@@ -41,6 +41,8 @@ from PyQt5.QtWidgets import QMenu, QShortcut
 
 from aqt import mw
 from aqt.reviewer import Reviewer
+from aqt.previewer import Previewer
+from aqt.qt import QApplication
 
 from .browser import browse_to_nid, browse_to_kanji
 from .config import config
@@ -63,18 +65,22 @@ def setup_shortcuts():
 
 
 def on_lookup_triggered(*args):
-    if mw.state != "review":
-        return
-    mw.reviewer.web.eval("invokeTooltipAtSelectedElm();")
+    window = QApplication.activeWindow()
+    if isinstance(window, Previewer):
+        window._web.eval("invokeTooltipAtSelectedElm();")
+    else:
+        mw.reviewer.web.eval("invokeTooltipAtSelectedElm();")
 
 
 def on_webview_will_show_context_menu(webview: "AnkiWebView", menu: QMenu):
     # shaky heuristic to determine which web view we are in
     if hasattr(webview, "title"):
-        if webview.title != "main webview":
+        if webview.title != "main webview" and webview.title != "previewer":
             return
 
-    if mw.state != "review" or not webview.selectedText():
+    window = QApplication.activeWindow()
+
+    if (mw.state != "review" and not isinstance(window, Previewer)) or not webview.selectedText():
         return
 
     action = menu.addAction("Look up in Pop-up Dictionary...")
@@ -112,7 +118,7 @@ def webview_message_handler(message: str) -> Optional[str]:
 def on_webview_will_set_content(
     web_content: "WebContent", context: Union[Reviewer, Any]
 ):
-    if not isinstance(context, Reviewer):
+    if not isinstance(context, Reviewer) and not isinstance(context, Previewer):
         return
 
     # Appending to body rather than using header. Not best practice, but let's stay
@@ -123,7 +129,7 @@ def on_webview_will_set_content(
 def on_webview_did_receive_js_message(
     handled: Tuple[bool, Any], message: str, context: Union[Reviewer, Any]
 ):
-    if not isinstance(context, Reviewer):
+    if not isinstance(context, Reviewer) and not isinstance(context, Previewer):
         return handled
 
     if not message.startswith(PYCMD_IDENTIFIER):

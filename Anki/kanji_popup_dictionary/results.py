@@ -39,6 +39,8 @@ import string
 
 from aqt import mw
 from aqt.utils import askUser
+from aqt.qt import QApplication
+from aqt.previewer import Previewer
 
 from .config import config
 from .libaddon.debug import logger
@@ -66,7 +68,7 @@ html_reslist: str = """<div class="pdict-reslist">{}</div>"""
 
 html_res_normal: str = f"""\
 <div class="pdict-res" data-nid={{}}>{{}}<div title="Browse..." class="pdict-brws"
-onclick='pycmd("{PYCMD_IDENTIFIER}BrowseNid:" + this.parentNode.dataset.nid)'>&rarr;</div><div title="Find words by kanji..." class="pdict-brws2"
+onclick='pycmd("{PYCMD_IDENTIFIER}BrowseNid:" + this.parentNode.dataset.nid)'>&rarr;</div><div title="Browse words by kanji..." class="pdict-brws2"
 onclick='pycmd("{PYCMD_IDENTIFIER}BrowseKanji:" + "{{}}")'>&rarr;</div></div>\
 """
 
@@ -141,6 +143,9 @@ def get_note_snippets_for(term: str) -> Union[List[str], bool, None]:
     logger.debug("getNoteSnippetsFor called")
 
     if term == "useQuestionField":
+        window = QApplication.activeWindow()
+        if isinstance(window, Previewer):
+            return False
         fieldName = mw.reviewer.card.model()['flds'][0]['name']
         term = mw.reviewer.card.note()[fieldName]
         term = stripHTML(term).strip()

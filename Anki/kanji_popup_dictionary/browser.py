@@ -35,6 +35,8 @@ from typing import TYPE_CHECKING, Union
 import aqt
 from aqt import mw
 from aqt.browser import Browser
+from aqt.qt import QApplication
+from aqt.previewer import Previewer
 
 if TYPE_CHECKING:
     from anki.notes import NoteId
@@ -60,7 +62,11 @@ def browse_to_nid(note_id: Union["NoteId", int]):
 def browse_to_kanji(kanji: str):
     """Open browser and find cards by kanji"""
 
-    fieldName = mw.reviewer.card.model()['flds'][0]['name']
+    window = QApplication.activeWindow()
+    if isinstance(window, Previewer):
+        fieldName = window._parent.current_card.model()['flds'][0]['name']
+    else:
+        fieldName = mw.reviewer.card.model()['flds'][0]['name']
 
     if NEW_SEARCH_SUPPORT:
         aqt.dialogs.open("Browser", mw, search=("deck:current", f"{fieldName}:*{kanji}*"))
