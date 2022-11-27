@@ -66,7 +66,8 @@ html_reslist: str = """<div class="pdict-reslist">{}</div>"""
 
 html_res_normal: str = f"""\
 <div class="pdict-res" data-nid={{}}>{{}}<div title="Browse..." class="pdict-brws"
-onclick='pycmd("{PYCMD_IDENTIFIER}Browse:" + this.parentNode.dataset.nid)'>&rarr;</div></div>\
+onclick='pycmd("{PYCMD_IDENTIFIER}BrowseNid:" + this.parentNode.dataset.nid)'>&rarr;</div><div title="Find words by kanji..." class="pdict-brws2"
+onclick='pycmd("{PYCMD_IDENTIFIER}BrowseKanji:" + "{{}}")'>&rarr;</div></div>\
 """
 
 html_field: str = """<div class="pdict-fld">{}</div>"""
@@ -92,14 +93,14 @@ def find_notes(collection: "Collection", query: str, **kwargs) -> Sequence["Note
     except AttributeError:
         return collection.findNotes(query, **kwargs)  # type:ignore[attr-defined]
 
-def process_note(note: "Note", excluded_flds: str) -> str:
+def process_note(note: "Note", excluded_flds: str, kanji: str) -> str:
     valid_flds = [
         html_field.format(i[1]) for i in note.items() if i[0] not in excluded_flds
     ]
     joined_flds = "".join(valid_flds)
     # remove cloze markers
     filtered_flds = cloze_re.sub(r"\2", joined_flds)
-    return html_res_normal.format(note.id, filtered_flds)    
+    return html_res_normal.format(note.id, filtered_flds, kanji)    
 
 
 # Functions that compose tooltip content
@@ -185,7 +186,7 @@ def get_note_snippets_for(term: str) -> Union[List[str], bool, None]:
         for kanji in kanji_list:
             for note in notes:
                 if kanji in note[kanji_field_name]:
-                    note_content.append(process_note(note, excluded_flds))
+                    note_content.append(process_note(note, excluded_flds, kanji))
                     notes.remove(note)
                     break
     else:

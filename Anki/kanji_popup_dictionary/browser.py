@@ -56,3 +56,15 @@ def browse_to_nid(note_id: Union["NoteId", int]):
         browser: Browser = aqt.dialogs.open("Browser", mw)
         browser.form.searchEdit.lineEdit().setText(f"nid:{note_id}")
         browser.onSearchActivated()
+
+def browse_to_kanji(kanji: str):
+    """Open browser and find cards by kanji"""
+
+    fieldName = mw.reviewer.card.model()['flds'][0]['name']
+
+    if NEW_SEARCH_SUPPORT:
+        aqt.dialogs.open("Browser", mw, search=("deck:current", f"{fieldName}:*{kanji}*"))
+    else:
+        browser: Browser = aqt.dialogs.open("Browser", mw)
+        browser.form.searchEdit.lineEdit().setText(f"deck:current {fieldName}:{kanji}")
+        browser.onSearchActivated()

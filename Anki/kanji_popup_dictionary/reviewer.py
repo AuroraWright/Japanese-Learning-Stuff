@@ -42,7 +42,7 @@ from PyQt5.QtWidgets import QMenu, QShortcut
 from aqt import mw
 from aqt.reviewer import Reviewer
 
-from .browser import browse_to_nid
+from .browser import browse_to_nid, browse_to_kanji
 from .config import config
 from .results import PYCMD_IDENTIFIER, get_content_for
 from .web import popup_integrator
@@ -89,11 +89,16 @@ def webview_message_handler(message: str) -> Optional[str]:
     cmd, arg = message.split(":", 1)
     subcmd = cmd.replace(PYCMD_IDENTIFIER, "")
 
-    if subcmd == "Browse":
+    if subcmd == "BrowseNid":
         (cmd, arg) = message.split(":", 1)
         if not arg:
             return None
         browse_to_nid(int(arg))
+    elif subcmd == "BrowseKanji":
+        (cmd, arg) = message.split(":", 1)
+        if not arg:
+            return None
+        browse_to_kanji(str(arg))
     elif subcmd == "Lookup":
         (cmd, payload) = message.split(":", 1)
         term = payload.strip()

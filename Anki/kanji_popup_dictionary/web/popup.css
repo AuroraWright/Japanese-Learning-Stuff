@@ -162,6 +162,20 @@ div {
   color: #ffde59 !important;
 }
 
+.qtip.pdict-popup .pdict-brws2 {
+  font-size: 1.2em !important;
+  position: absolute !important;
+  bottom: 5px !important;
+  right: 25px !important;
+  line-height: 5px !important;
+  vertical-align: bottom !important;
+  color: #a80000 !important;
+  cursor: pointer !important;
+}
+.night_mode .qtip.pdict-popup .pdict-brws2 {
+  color: #59a3ff !important;
+}
+
 /* Dictionary entries */
 
 .qtip.pdict-popup .pdict-dict {
