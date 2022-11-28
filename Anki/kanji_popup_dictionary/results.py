@@ -160,8 +160,10 @@ def get_note_snippets_for(term: str) -> Union[List[str], bool, None]:
         query += '"' + kanji + '"'
     if kanji_list:
         query += ")"
-    else:
+    elif all(c.isalnum() or c.isspace() for c in term):
         query = keyword_field_name + ":*" + term + "*"
+    else:
+        return False
 
     query += ' deck:"' + rtk_deck_name + '"'
 
@@ -196,6 +198,8 @@ def get_note_snippets_for(term: str) -> Union[List[str], bool, None]:
                     break
     else:
         for note in notes:
-            note_content.append(process_note(note, excluded_flds))
+            kanji = note[kanji_field_name]
+            kanji = stripHTML(kanji).strip()
+            note_content.append(process_note(note, excluded_flds, kanji))
 
     return note_content
