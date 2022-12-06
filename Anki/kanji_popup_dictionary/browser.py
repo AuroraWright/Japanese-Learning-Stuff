@@ -81,7 +81,7 @@ def browse_to_kanji(kanji: str):
         browser.onSearchActivated()
 
     if pointVersion() >= 45:
-        # Wordaround Anki issue
+        # Workaround Anki issue
         if browser.table._model.is_empty():
             browser._lastSearchTxt = ""
         col_index = browser.table._model.active_column_index(sorting_column)
