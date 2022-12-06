@@ -35,8 +35,10 @@ from typing import TYPE_CHECKING, Union
 import aqt
 from aqt import mw
 from aqt.browser import Browser
-from aqt.qt import QApplication
+from aqt.qt import *
+from anki.utils import pointVersion
 from aqt.previewer import Previewer
+from .config import config
 
 if TYPE_CHECKING:
     from anki.notes import NoteId
@@ -62,6 +64,9 @@ def browse_to_nid(note_id: Union["NoteId", int]):
 def browse_to_kanji(kanji: str):
     """Open browser and find cards by kanji"""
 
+    conf = config["local"]
+    sorting_column = conf["wordSearchSortingColumn"]
+
     window = QApplication.activeWindow()
     if isinstance(window, Previewer):
         fieldName = window._parent.current_card.model()['flds'][0]['name']
@@ -69,8 +74,18 @@ def browse_to_kanji(kanji: str):
         fieldName = mw.reviewer.card.model()['flds'][0]['name']
 
     if NEW_SEARCH_SUPPORT:
-        aqt.dialogs.open("Browser", mw, search=("deck:current", f"{fieldName}:*{kanji}*"))
+        browser = aqt.dialogs.open("Browser", mw, search=("deck:current", f"{fieldName}:*{kanji}*"))
     else:
         browser: Browser = aqt.dialogs.open("Browser", mw)
         browser.form.searchEdit.lineEdit().setText(f"deck:current {fieldName}:{kanji}")
         browser.onSearchActivated()
+
+    if pointVersion() >= 45:
+        # Wordaround Anki issue
+        if browser.table._model.is_empty():
+            browser._lastSearchTxt = ""
+        col_index = browser.table._model.active_column_index(sorting_column)
+        browser.table._on_sort_column_changed(col_index, Qt.SortOrder.DescendingOrder)
+    else:
+        col_index = browser.model.activeCols.index(sorting_column)
+        browser.onSortChanged(col_index, True)
