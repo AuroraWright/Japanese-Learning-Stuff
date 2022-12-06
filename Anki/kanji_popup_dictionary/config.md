@@ -1,17 +1,14 @@
-### Pop-up Dictionary Configuration
+### Kanji Pop-up Dictionary Configuration
 
-*If Pop-up Dictionary has been a valuable asset in your studies, please consider  supporting my efforts by [buying me a coffee](https://ko-fi.com/X8X0L4YV), or by [pledging your support on Patreon](https://www.patreon.com/glutanimate). Each and every contribution is greatly appreciated and will help me maintain and improve Pop-up Dictionary as time goes by!*
+*If Kanji Pop-up Dictionary has been a valuable asset in your studies, please consider supporting the efforts of the original dev efforts by [buying them a coffee](https://ko-fi.com/X8X0L4YV), or by [pledging your support on Patreon](https://www.patreon.com/glutanimate). Each and every contribution is greatly appreciated and will help them maintain and improve Pop-up Dictionary as time goes by!*
 
 Please note that the following settings do not sync and require a restart to apply:
 
-- `dictionaryEnabled` (true/false): Whether or not to enable results drawn from the dictionary note type. Default: `true`.
-- `dictionaryDefinitionFieldName` (string): Name of the dictionary definition field in the dictionary note type. Default: `"Definition"`.
-- `dictionaryNoteTypeName` (string): Name of the dictionary note type. Default: `"Dictionary Entry"`.
-- `dictionaryTermFieldName` (string): Name of the dictionary term field in the dictionary note type. Default: `"Term"`.
+- `RTKDeckName` (string): Name of the RTK deck to take kanji cards from. Default: `"RTK"`.
+- `keywordFieldName` (string): Name of the RTK keyword field in the RTK deck. Default: `"Keyword"`.
+- `kanjiFieldName` (string): Name of the kanji field in the RTK deck. Default: `"Kanji"`.
 - `generalConfirmEmpty` (true/false): Whether or not to show tooltip when no results have been found. Default: `true`.
 - `generalHotkey` (string): Hotkey to invoke tooltip manually. Default: `"Ctrl+Shift+D"`.
-- `snippetsEnabled` (true/false): Whether or not to enable results drawn from any type of note in your collection. Default: `true`.
 - `snippetsExcludedFields` (list): List of fields to exclude from being shown in the note snippet section of the tooltip. Default: `["Note ID", "ID (hidden)"]`.
-- `snippetsExcludeNewNotes` (true/false): Whether or not to exclude snippet results from new notes. Default: `false`.
-- `snippetsLimitToCurrentDeck` (true/false): Whether or not to limit note snippet results to current deck. Default: `true`.
 - `snippetsResultsWarnLimit` (integer): Number of results above which to show a warning on the potential slowdowns they could cause. Set to `0` to disable warning. Default: `1000`.
+- `wordSearchSortingColumn` (string): Internal Anki name for the column to order words by in the search by kanji browser window. Default: `"cardDue"`.
