@@ -83,7 +83,7 @@ def on_webview_will_show_context_menu(webview: "AnkiWebView", menu: QMenu):
     if (mw.state != "review" and not isinstance(window, Previewer)) or not webview.selectedText():
         return
 
-    action = menu.addAction("Look up in Pop-up Dictionary...")
+    action = menu.addAction("Look up in Kanji Pop-up Dictionary...")
     action.setShortcut(config["local"]["generalHotkey"])
     action.triggered.connect(on_lookup_triggered)
 

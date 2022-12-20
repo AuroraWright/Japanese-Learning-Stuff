@@ -36,10 +36,8 @@ from .libaddon.consts import setAddonProperties
 
 setAddonProperties(ADDON)
 
-from .migrate import migrate_addon
 from .reviewer import initialize_reviewer
 from .web import initialize_web
 
-migrate_addon()
 initialize_web()
 initialize_reviewer()
