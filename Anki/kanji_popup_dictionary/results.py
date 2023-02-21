@@ -161,7 +161,7 @@ def get_note_snippets_for(term: str) -> Union[List[str], bool, None]:
     if kanji_list:
         query += ")"
     elif all(c.isalnum() or c.isspace() for c in term):
-        query = keyword_field_name + ":*" + term + "*"
+        query = keyword_field_name + ':"*' + term + '*"'
     else:
         return False
 
