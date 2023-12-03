@@ -36,13 +36,10 @@ Modifications to Anki's Reviewer
 import json
 from typing import TYPE_CHECKING, Any, Optional, Tuple, Union
 
-from PyQt5.QtGui import QKeySequence
-from PyQt5.QtWidgets import QMenu, QShortcut
-
 from aqt import mw
 from aqt.reviewer import Reviewer
 from aqt.previewer import Previewer
-from aqt.qt import QApplication
+from aqt.qt import QKeySequence, QMenu, QShortcut, QApplication
 
 from .browser import browse_to_nid, browse_to_kanji
 from .config import config

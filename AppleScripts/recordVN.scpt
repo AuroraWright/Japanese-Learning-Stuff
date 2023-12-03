@@ -2,16 +2,29 @@ set appName to "Anki"
 if application appName is not running then
 	return
 end if
-set appName2 to "Parallels Desktop"
-if application appName2 is not running then
-	return
-end if
 
 set configFile to ((path to home folder) & ".config:vnrecordingscript.conf") as string
 set theFileContents to paragraphs of (read file configFile)
-set keyCode1 to item 1 of theFileContents as integer
-set keyCode2 to item 2 of theFileContents as integer
-set keyCodeInterval to item 3 of theFileContents as real
+set manageWindows to item 1 of theFileContents as integer
+set appName2 to item 2 of theFileContents as string
+set delayInterval to item 3 of theFileContents as real
+set keyCode1 to item 4 of theFileContents as integer
+set keyCode2 to item 5 of theFileContents as integer
+set keyCodeInterval to item 6 of theFileContents as real
+
+if manageWindows is equal to 1 then
+	if application appName2 is not running then
+		set process_running to false
+		try
+			do shell script "/usr/bin/pgrep -q " & appName2
+			set process_running to true
+		end try
+		
+		if not process_running then
+			return
+		end if
+	end if
+end if
 
 set ffmpeg_running to false
 try
@@ -27,11 +40,18 @@ if ffmpeg_running then
 		try
 			do shell script "/usr/bin/pgrep -q ffmpeg"
 			delay 0.2
-			on error
-				exit repeat			
+		on error
+			exit repeat
 		end try
 	end repeat
-	tell application id (id of application appName2) to activate
+	if manageWindows is equal to 1 then
+		tell application id (id of application appName2) to activate
+	else if manageWindows is equal to 2 then
+	    tell application "System Events" to key code 124 using control down
+	    delay appName2
+	else
+	    delay appName2
+	end if
 	tell application "System Events"
 		key down keyCode2
 		delay keyCodeInterval
@@ -43,14 +63,22 @@ if ffmpeg_running then
 else
 	set formattedDate to (do shell script "date +'%Y-%m-%d-%H.%M.%S'")
 	set filename to "/tmp/recording-" & formattedDate & ".m4a"
-	tell application id (id of application appName2) to activate
+	if manageWindows is equal to 1 then
+		tell application id (id of application appName2) to activate
+	else if manageWindows is equal to 2 then
+	    tell application "System Events" to key code 124 using control down
+	    delay appName2
+	else
+	    delay appName2
+	end if
 	tell application "System Events"
 		key down keyCode1
 		delay keyCodeInterval
 		key up keyCode1
 	end tell
+	delay delayInterval
 	do shell script "echo '' > /tmp/ffmpeg_stop"
-	do shell script "</tmp/ffmpeg_stop /opt/homebrew/bin/ffmpeg -f avfoundation -i ':Windows' -c:a aac_at -aac_at_mode vbr -q:a 8 -f ipod " & quoted form of filename & "> /dev/null 2>&1 &"
+	do shell script "</tmp/ffmpeg_stop /opt/homebrew/bin/ffmpeg -f avfoundation -i ':Studying' -c:a aac_at -aac_at_mode vbr -q:a 8 -f ipod " & quoted form of filename & "> /dev/null 2>&1 &"
 	tell application "System Events"
 		repeat
 			if exists file filename then
