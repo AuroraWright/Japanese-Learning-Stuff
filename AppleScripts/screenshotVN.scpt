@@ -41,7 +41,7 @@ on screencapture()
 
 import sys, time, os, configparser, io
 import Quartz.CoreGraphics as CoreGraphics
-from AppKit import NSPasteboard, NSArray, NSImage, NSSize, NSRect, NSBitmapImageRep, NSGraphicsContext
+from AppKit import NSPasteboard, NSArray, NSImage, NSSize, NSRect, NSBitmapImageRep, NSGraphicsContext, NSString
 import AppKit
 
 def resize_image(original_image, max_width, max_height):
@@ -130,9 +130,10 @@ def main():
     if config['config']['resize'] == 'true':
         ns_image = resize_image(ns_image, float(config['config']['max_width']), float(config['config']['max_height']))
 
+    string = NSString.stringWithString_('*ocr_ignore*')
     pb = NSPasteboard.generalPasteboard()
     pb.clearContents()
-    a = NSArray.arrayWithObject_(ns_image)
+    a = NSArray.arrayWithObjects_(ns_image, string)
     pb.writeObjects_(a)
 
 main()
