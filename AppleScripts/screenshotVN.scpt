@@ -15,14 +15,12 @@ if manageWindows is equal to 1 then
             do shell script "/usr/bin/pgrep -q " & appName2
             set process_running to true
         end try
-        
+
         if not process_running then
             return
         end if
     end if
-    tell application "System Events"
-        tell process appName2 to set frontmost to true
-    end tell
+    tell application id (id of application appName2) to activate
 else if manageWindows is equal to 2 then
     tell application "System Events" to key code 124 using control down
 else
@@ -31,20 +29,39 @@ end if
 
 screencapture()
 
-tell application "System Events"
-    tell process appName to set frontmost to true
-    keystroke "r" using {command down}
-end tell
+tell application id (id of application appName) to activate
 
 on screencapture()
     do shell script "/opt/homebrew/bin/python3 <<'EOF' - 
 
-import sys, time, os, configparser, io
+import sys, time, os, configparser, json, base64
 import Quartz.CoreGraphics as CoreGraphics
-from AppKit import NSPasteboard, NSArray, NSImage, NSSize, NSRect, NSBitmapImageRep, NSGraphicsContext, NSString
+from AppKit import NSImage, NSSize, NSRect, NSBitmapImageRep, NSGraphicsContext, NSBitmapImageFileTypeJPEG
 import AppKit
+import urllib.request
+from datetime import datetime
 
-def resize_image(original_image, max_width, max_height):
+
+def request(action, **params):
+    return {'action': action, 'params': params, 'version': 6}
+
+def anki_connect(action, **params):
+    requestJson = json.dumps(request(action, **params)).encode('utf-8')
+    response = json.load(urllib.request.urlopen(urllib.request.Request('http://127.0.0.1:8765', requestJson)))
+    if len(response) != 2:
+        raise Exception('response has an unexpected number of fields')
+    if 'error' not in response:
+        raise Exception('response is missing required error field')
+    if 'result' not in response:
+        raise Exception('response is missing required result field')
+    if response['error'] is not None:
+        raise Exception(response['error'])
+    return response['result']
+
+
+def resize_image(original_image_rep, max_width, max_height):
+    original_image = NSImage.alloc().init()
+    original_image.addRepresentation_(original_image_rep)
     original_width = original_image.size().width
     original_height = original_image.size().height
 
@@ -67,7 +84,7 @@ def resize_image(original_image, max_width, max_height):
 
     new_size = NSSize(new_width, new_height)
 
-    bitmap = NSBitmapImageRep.alloc().initWithBitmapDataPlanes_pixelsWide_pixelsHigh_bitsPerSample_samplesPerPixel_hasAlpha_isPlanar_colorSpaceName_bytesPerRow_bitsPerPixel_(
+    resized_image = NSBitmapImageRep.alloc().initWithBitmapDataPlanes_pixelsWide_pixelsHigh_bitsPerSample_samplesPerPixel_hasAlpha_isPlanar_colorSpaceName_bytesPerRow_bitsPerPixel_(
         None,  # Set to None to create a new bitmap
         int(new_size.width),
         int(new_size.height),
@@ -80,7 +97,7 @@ def resize_image(original_image, max_width, max_height):
         32  # Bits per pixel (8 bits per sample * 4 samples per pixel)
     )
 
-    context = NSGraphicsContext.graphicsContextWithBitmapImageRep_(bitmap)
+    context = NSGraphicsContext.graphicsContextWithBitmapImageRep_(resized_image)
     context.setImageInterpolation_(AppKit.NSImageInterpolationHigh)
     NSGraphicsContext.setCurrentContext_(context)
 
@@ -91,9 +108,6 @@ def resize_image(original_image, max_width, max_height):
         AppKit.NSCompositeSourceOver,
         1.0
     )
-
-    resized_image = NSImage.alloc().init()
-    resized_image.addRepresentation_(bitmap)
 
     return resized_image
 
@@ -125,16 +139,27 @@ def main():
         x, y, w, h = [float(x) for x in coords.split(' ')]
         img = CoreGraphics.CGDisplayCreateImageForRect(display_id, CoreGraphics.CGRectMake(x, y, w, h))
 
-    ns_image = NSImage.alloc().initWithCGImage_(img)
+    ns_imagerep = NSBitmapImageRep.alloc().initWithCGImage_(img)
 
     if config['config']['resize'] == 'true':
-        ns_image = resize_image(ns_image, float(config['config']['max_width']), float(config['config']['max_height']))
+        ns_imagerep = resize_image(ns_imagerep, float(config['config']['max_width']), float(config['config']['max_height']))
 
-    string = NSString.stringWithString_('*ocr_ignore*')
-    pb = NSPasteboard.generalPasteboard()
-    pb.clearContents()
-    a = NSArray.arrayWithObjects_(ns_image, string)
-    pb.writeObjects_(a)
+    jpg_image = ns_imagerep.representationUsingType_properties_(NSBitmapImageFileTypeJPEG, None)
+    encoded_image = base64.b64encode(jpg_image).decode('ascii')
+    filename = 'screenshot-' + datetime.now().strftime('%Y-%m-%d-%H.%M.%S') + '.jpg'
+    added_notes = anki_connect('findNotes', query='added:1')
+    added_notes.sort()
+    noteid = added_notes[-1]
+    note = {'id': noteid, 
+            'fields': {},
+            'picture': {'filename': filename,
+                        'data': encoded_image,
+                        'fields': ['Picture']
+                       }
+           }
+    anki_connect('guiBrowse', query='nid:1')
+    anki_connect('updateNoteFields', note=note)
+    anki_connect('guiBrowse', query='is:new')
 
 main()
 EOF"
