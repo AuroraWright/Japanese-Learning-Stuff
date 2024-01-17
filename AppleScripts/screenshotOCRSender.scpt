@@ -34,7 +34,8 @@ async def ws_client(img):
     try:
         async with websockets.connect(url) as ws:
             await ws.send(img)
-        return True
+            response = await ws.recv()
+        return response == 'True'
     except Exception:
         return False
 
