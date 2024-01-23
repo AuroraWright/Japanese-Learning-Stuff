@@ -60,7 +60,6 @@ if ffmpeg_running then
 	set posixFileName to the quoted form of POSIX path of (POSIX file (recordingsFolder & "/" & audioFileName))
 	savetoanki(posixFileName)
 	tell application id (id of application appName) to activate
-	beep 2
 else
 	set formattedDate to (do shell script "date +'%Y-%m-%d-%H.%M.%S'")
 	set filename to "/tmp/recording-" & formattedDate & ".m4a"
@@ -117,19 +116,45 @@ def anki_connect(action, **params):
 
 
 def main():
+    if len(sys.argv) != 2:
+        return
     added_notes = anki_connect('findNotes', query='added:1')
+    if len(added_notes) == 0:
+        return
     added_notes.sort()
-    noteid = added_notes[-1]
-    note = {'id': noteid, 
-            'fields': {},
-            'audio': {'filename': os.path.basename(sys.argv[1]),
-                      'path': sys.argv[1],
-                      'fields': ['SentenceAudio']
-                     }
-           }
+    try:
+        with open('/tmp/last_edited_cards.json', 'rb') as fp:
+            updated_list = json.load(fp)
+    except IOError:
+        return
+    if len(updated_list) == 0:
+        return
     anki_connect('guiBrowse', query='nid:1')
-    anki_connect('updateNoteFields', note=note)
-    anki_connect('guiBrowse', query='is:new')
+    note_index = -1
+    while True:
+        if abs(note_index) > len(added_notes):
+            break
+        note_id = added_notes[note_index]
+        if not note_id in updated_list:
+            break
+        note_data = anki_connect('notesInfo', notes=[note_id])
+        if note_data[0]['fields']['SentenceAudio']['value'] != '':
+            break
+        note = {'id': note_id, 
+                'fields': {},
+                'audio': {'filename': os.path.basename(sys.argv[1]),
+                          'path': sys.argv[1],
+                          'fields': ['SentenceAudio']
+                         }
+               }
+        anki_connect('updateNoteFields', note=note)
+        note_index -= 1
+    try:
+        os.remove(sys.argv[1])
+    except OSError:
+        pass
+
+    anki_connect('guiBrowse', query='added:1', reorderCards={'order': 'descending', 'columnId': 'noteCrt'})
 
 main()
 EOF"

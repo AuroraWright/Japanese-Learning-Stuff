@@ -36,7 +36,7 @@ on screencapture()
 
 import sys, time, os, configparser, json, base64
 import Quartz.CoreGraphics as CoreGraphics
-from AppKit import NSImage, NSSize, NSRect, NSBitmapImageRep, NSGraphicsContext, NSBitmapImageFileTypeJPEG
+from AppKit import NSImage, NSSize, NSRect, NSBitmapImageRep, NSGraphicsContext, NSBitmapImageFileTypeJPEG, NSImageCompressionFactor
 import AppKit
 import urllib.request
 from datetime import datetime
@@ -144,22 +144,39 @@ def main():
     if config['config']['resize'] == 'true':
         ns_imagerep = resize_image(ns_imagerep, float(config['config']['max_width']), float(config['config']['max_height']))
 
-    jpg_image = ns_imagerep.representationUsingType_properties_(NSBitmapImageFileTypeJPEG, None)
+    options = {NSImageCompressionFactor: float(config['config']['jpeg_quality'])}
+    jpg_image = ns_imagerep.representationUsingType_properties_(NSBitmapImageFileTypeJPEG, options)
     encoded_image = base64.b64encode(jpg_image).decode('ascii')
     filename = 'screenshot-' + datetime.now().strftime('%Y-%m-%d-%H.%M.%S') + '.jpg'
+
     added_notes = anki_connect('findNotes', query='added:1')
+    if len(added_notes) == 0:
+        return
     added_notes.sort()
-    noteid = added_notes[-1]
-    note = {'id': noteid, 
-            'fields': {},
-            'picture': {'filename': filename,
-                        'data': encoded_image,
-                        'fields': ['Picture']
-                       }
-           }
     anki_connect('guiBrowse', query='nid:1')
-    anki_connect('updateNoteFields', note=note)
-    anki_connect('guiBrowse', query='is:new')
+    note_index = -1
+    updated_list = []
+    while True:
+        if abs(note_index) > len(added_notes):
+            break
+        note_id = added_notes[note_index]
+        note_data = anki_connect('notesInfo', notes=[note_id])
+        if note_data[0]['fields']['Picture']['value'] != '':
+            break
+        note = {'id': note_id, 
+                'fields': {},
+                'picture': {'filename': filename,
+                            'data': encoded_image,
+                            'fields': ['Picture']
+                           }
+               }
+        anki_connect('updateNoteFields', note=note)
+        updated_list.append(note_id)
+        note_index -= 1
+    with open('/tmp/last_edited_cards.json', 'w') as fp:
+        json.dump(updated_list, fp)
+
+    anki_connect('guiBrowse', query='added:1', reorderCards={'order': 'descending', 'columnId': 'noteCrt'})
 
 main()
 EOF"
