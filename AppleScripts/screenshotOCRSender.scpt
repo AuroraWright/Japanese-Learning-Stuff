@@ -12,7 +12,7 @@ from PIL import ImageGrab, Image
 
 def image_to_byte_array(img):
     image_bytes = io.BytesIO()
-    img.save(image_bytes, format=img.format)
+    img.save(image_bytes, format='png', compress_level=1)
     return image_bytes.getvalue()
 
 def read_from_pasteboard(pasteboard):
