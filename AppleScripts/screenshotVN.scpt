@@ -36,8 +36,7 @@ on screencapture()
 
 import sys, time, os, configparser, json, base64
 import Quartz.CoreGraphics as CoreGraphics
-from AppKit import NSImage, NSSize, NSRect, NSBitmapImageRep, NSGraphicsContext, NSBitmapImageFileTypeJPEG, NSImageCompressionFactor
-import AppKit
+from AppKit import NSImage, NSBitmapImageRep, NSDeviceRGBColorSpace, NSSize, NSRect, NSZeroPoint, NSZeroRect, NSCompositingOperationCopy, NSGraphicsContext, NSImageInterpolationHigh, NSBitmapImageFileTypeJPEG, NSImageCompressionFactor
 import urllib.request
 from datetime import datetime
 
@@ -76,36 +75,34 @@ def resize_image(original_image_rep, max_width, max_height):
     width_ratio = original_width / max_width
     height_ratio = original_height / max_height
     if width_ratio > height_ratio:
-        new_width = original_width / width_ratio
-        new_height = original_height / width_ratio
+        new_width = int(original_width / width_ratio)
+        new_height = int(original_height / width_ratio)
     else:
-        new_width = original_width / height_ratio
-        new_height = original_height / height_ratio
-
-    new_size = NSSize(new_width, new_height)
+        new_width = int(original_width / height_ratio)
+        new_height = int(original_height / height_ratio)
 
     resized_image = NSBitmapImageRep.alloc().initWithBitmapDataPlanes_pixelsWide_pixelsHigh_bitsPerSample_samplesPerPixel_hasAlpha_isPlanar_colorSpaceName_bytesPerRow_bitsPerPixel_(
         None,  # Set to None to create a new bitmap
-        int(new_size.width),
-        int(new_size.height),
+        new_width,
+        new_height,
         8,  # Bits per sample
         4,  # Samples per pixel (R, G, B, A)
         True,  # Has alpha
         False,  # Is not planar
-        AppKit.NSDeviceRGBColorSpace,
+        NSDeviceRGBColorSpace,
         0,  # Automatically compute bytes per row
         32  # Bits per pixel (8 bits per sample * 4 samples per pixel)
     )
 
     context = NSGraphicsContext.graphicsContextWithBitmapImageRep_(resized_image)
-    context.setImageInterpolation_(AppKit.NSImageInterpolationHigh)
+    context.setImageInterpolation_(NSImageInterpolationHigh)
     NSGraphicsContext.setCurrentContext_(context)
 
-    original_rect = NSRect((0, 0), new_size)
+    original_rect = NSRect(NSZeroPoint, NSSize(new_width, new_height))
     original_image.drawInRect_fromRect_operation_fraction_(
         original_rect,
-        AppKit.NSZeroRect,
-        AppKit.NSCompositeSourceOver,
+        NSZeroRect,
+        NSCompositingOperationCopy,
         1.0
     )
 

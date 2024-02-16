@@ -5,19 +5,11 @@ on screencapture()
 
 import subprocess
 import asyncio
-import io
 import websockets
-from AppKit import NSPasteboard, NSPasteboardItem, NSMutableArray
-from PIL import ImageGrab, Image
+from AppKit import NSPasteboard, NSPasteboardTypePNG, NSPasteboardItem, NSMutableArray
 
-def image_to_byte_array(img):
-    image_bytes = io.BytesIO()
-    img.save(image_bytes, format='png', compress_level=1)
-    return image_bytes.getvalue()
-
-def read_from_pasteboard(pasteboard):
+def backup_from_pasteboard(pasteboard):
     pasteboard_items = NSMutableArray.array()
-
     for item in pasteboard.pasteboardItems():
         data_holder = NSPasteboardItem.alloc().init()
         for type in item.types():
@@ -28,6 +20,13 @@ def read_from_pasteboard(pasteboard):
         pasteboard_items.addObject_(data_holder)
 
     return pasteboard_items
+
+def get_image_from_pasteboard(pasteboard):
+    if NSPasteboardTypePNG in pasteboard.types():
+        image_data = pasteboard.dataForType_(NSPasteboardTypePNG)
+        return bytes(image_data)
+
+    return None
 
 async def ws_client(img):
     url = 'ws://127.0.0.1:7331'
@@ -41,7 +40,7 @@ async def ws_client(img):
 
 def main():
     pb = NSPasteboard.generalPasteboard()
-    pasteboard_backup = read_from_pasteboard(pb)
+    pasteboard_backup = backup_from_pasteboard(pb)
     count = pb.changeCount()
     cmd = ['screencapture', '-i', '-c']
     subprocess.run(cmd)
@@ -49,12 +48,9 @@ def main():
     restore_pasteboard = False
 
     if count != pb.changeCount():
-        try:
-            img = ImageGrab.grabclipboard()
-        except OSError as error:
-            pass
-        else:
-            restore_pasteboard = asyncio.run(ws_client(image_to_byte_array(img)))
+        img = get_image_from_pasteboard(pb)
+        if img:
+            restore_pasteboard = asyncio.run(ws_client(img))
 
     if restore_pasteboard:
         pb.clearContents()
