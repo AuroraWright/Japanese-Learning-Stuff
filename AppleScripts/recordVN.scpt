@@ -95,6 +95,8 @@ on savetoanki(posixFileName)
     do shell script "/opt/homebrew/bin/python3 <<'EOF' - " & posixFileName & "
 
 import sys, json, os
+from subprocess import Popen
+import signal
 import urllib.request
 
 
@@ -149,12 +151,17 @@ def main():
                }
         anki_connect('updateNoteFields', note=note)
         note_index -= 1
-    try:
-        os.remove(sys.argv[1])
-    except OSError:
-        pass
 
     anki_connect('guiBrowse', query='added:1', reorderCards={'order': 'descending', 'columnId': 'noteCrt'})
+
+    if note_index != -1:
+        Popen(f'afplay -t 2 {sys.argv[1]} && rm {sys.argv[1]}', shell=True)
+        signal.signal(signal.SIGCHLD, signal.SIG_IGN)
+    else:
+        try:
+            os.remove(sys.argv[1])
+        except OSError:
+            pass
 
 main()
 EOF"

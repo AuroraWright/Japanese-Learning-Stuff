@@ -4,8 +4,7 @@ on screencapture()
     do shell script "/opt/homebrew/bin/python3 <<'EOF' - 
 
 import subprocess
-import asyncio
-import websockets
+import socket
 from AppKit import NSPasteboard, NSPasteboardTypePNG, NSPasteboardItem, NSMutableArray
 
 def backup_from_pasteboard(pasteboard):
@@ -28,14 +27,15 @@ def get_image_from_pasteboard(pasteboard):
 
     return None
 
-async def ws_client(img):
-    url = 'ws://127.0.0.1:7331'
+def send_img(img):
     try:
-        async with websockets.connect(url) as ws:
-            await ws.send(img)
-            response = await ws.recv()
-        return response == 'True'
-    except Exception:
+        with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as s:
+            s.connect('/tmp/owocr.sock')
+            s.sendall(len(img).to_bytes(4))
+            s.sendall(img)
+            response = s.recv(5)
+        return response.decode() == 'True'
+    except:
         return False
 
 def main():
@@ -50,7 +50,7 @@ def main():
     if count != pb.changeCount():
         img = get_image_from_pasteboard(pb)
         if img:
-            restore_pasteboard = asyncio.run(ws_client(img))
+            restore_pasteboard = send_img(img)
 
     if restore_pasteboard:
         pb.clearContents()
