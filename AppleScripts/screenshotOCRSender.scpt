@@ -12,9 +12,9 @@ def backup_from_pasteboard(pasteboard):
     for item in pasteboard.pasteboardItems():
         data_holder = NSPasteboardItem.alloc().init()
         for type in item.types():
-            data = item.dataForType_(type).mutableCopy()
+            data = item.dataForType_(type)
             if data:
-                data_holder.setData_forType_(data, type)
+                data_holder.setData_forType_(data.mutableCopy(), type)
 
         pasteboard_items.addObject_(data_holder)
 
