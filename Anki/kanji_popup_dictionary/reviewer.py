@@ -64,9 +64,9 @@ def setup_shortcuts():
 def on_lookup_triggered(*args):
     window = QApplication.activeWindow()
     if isinstance(window, Previewer):
-        window._web.eval("invokeTooltipAtSelectedElm();")
+        window._web.eval("invokeTooltipAtSelectedElm('" + config["local"]["defaultTooltipDivId"] + "');")
     else:
-        mw.reviewer.web.eval("invokeTooltipAtSelectedElm();")
+        mw.reviewer.web.eval("invokeTooltipAtSelectedElm('" + config["local"]["defaultTooltipDivId"] + "');")
 
 
 def on_webview_will_show_context_menu(webview: "AnkiWebView", menu: QMenu):

@@ -83,7 +83,7 @@ $(document).ready(function () {
       if (clicks === 2) {
         event.stopImmediatePropagation();
         $(document).one("mouseup", function (event) {
-          showTooltip(event, tooltip, element);
+          showTooltip(event, tooltip, element, '');
           clicks = 0;
           return;
         });
@@ -102,7 +102,7 @@ $(document).ready(function () {
     );
   };
 
-  invokeTooltipAtSelectedElm = function () {
+  invokeTooltipAtSelectedElm = function (divid) {
     var selection = getSelected();
     term = selection.toString().trim();
     if(term.length == 0) {
@@ -120,11 +120,11 @@ $(document).ready(function () {
         var tooltip = ttBoundElm.qtip("api");
       }
     }
-    showTooltip(event, tooltip, ttBoundElm);
+    showTooltip(event, tooltip, ttBoundElm, divid);
   };
 
   // Look up selected text and show result in provided tooltip
-  showTooltip = function (event, tooltip, element) {
+  showTooltip = function (event, tooltip, element, divid) {
     /* event: event that triggered function call
            tooltip: qtip api object of tooltip to use for showing results
            element: element that tooltip is bound to */
@@ -145,7 +145,12 @@ $(document).ready(function () {
 
     if(term.length == 0){
       term="useQuestionField";
-      tooltip.set("position.target", $('#qa > div'));
+      if (divid.trim().length === 0) {
+        tooltip.set("position.target", $('#qa > div'));
+      }
+      else {
+        tooltip.set("position.target", $('#' + divid));
+      }
       tooltip.set("position.at", "bottom center");
     }
 

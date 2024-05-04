@@ -6,5 +6,6 @@
     "generalHotkey": "Alt+Shift+D",
     "snippetsExcludedFields": ["Note ID", "ID (hidden)"],
     "snippetsResultsWarnLimit": 1000,
-    "wordSearchSortingColumn": "cardDue"
+    "wordSearchSortingColumn": "cardDue",
+    "defaultTooltipDivId": ""
 }
