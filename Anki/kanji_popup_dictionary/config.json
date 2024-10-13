@@ -7,5 +7,5 @@
     "snippetsExcludedFields": ["Note ID", "ID (hidden)"],
     "snippetsResultsWarnLimit": 1000,
     "wordSearchSortingColumn": "cardDue",
-    "defaultTooltipDivId": ""
+    "defaultTooltipDivId": "qa > div"
 }

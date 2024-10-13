@@ -53,7 +53,7 @@ div {
 .qtip.pdict-popup {
   color: #141414 !important;
   background-color: white !important;
-  max-width: 30vw !important;
+  max-width: min(45vw, 600px) !important;
   max-height: 90vh !important;
   padding: 4px !important;
   box-shadow: 0 0 20px rgba(0, 0, 0, 0.4) !important;
@@ -120,8 +120,7 @@ div {
   margin-left: 0 !important;
   margin-right: 0 !important;
   margin-bottom: 5px !important;
-  max-width: calc(30vw - 40px) !important;
-  max-height: calc(90vh - 40px) !important;
+  max-height: calc(90vh - 10px) !important;
   overflow-y: auto !important;
 }
 .qtip.pdict-popup .pdict-res {

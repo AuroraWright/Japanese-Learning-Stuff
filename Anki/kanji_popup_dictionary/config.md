@@ -12,4 +12,4 @@ Please note that the following settings do not sync and require a restart to app
 - `snippetsExcludedFields` (list): List of fields to exclude from being shown in the note snippet section of the tooltip. Default: `["Note ID", "ID (hidden)"]`.
 - `snippetsResultsWarnLimit` (integer): Number of results above which to show a warning on the potential slowdowns they could cause. Set to `0` to disable warning. Default: `1000`.
 - `wordSearchSortingColumn` (string): Internal Anki name for the column to order words by in the search by kanji browser window. Default: `"cardDue"`.
-- `defaultTooltipDivId` (string): Id of the div to use to position the tooltip when invoked via the hotkey. Only set if the tooltip isn't displayed correctly, has to be the id of a div from the card template. Default: `""`.
+- `defaultTooltipDivId` (string): Id of the div to use to position the tooltip when invoked via the hotkey. Only change if the tooltip isn't displayed correctly, has to be the id of a div from the card template. Default: `"qa > div"`.

@@ -35,10 +35,11 @@ on screencapture()
     do shell script "/opt/homebrew/bin/python3 <<'EOF' - 
 
 import sys, time, os, configparser, json, base64
-import Quartz.CoreGraphics as CoreGraphics
+from Quartz import CGGetActiveDisplayList, CGMainDisplayID, CGDisplayCreateImage, CGDisplayCreateImageForRect, CGRectMake, CGRectNull, CGWindowListCopyWindowInfo, CGWindowListCreateImageFromArray, kCGWindowListExcludeDesktopElements, kCGWindowImageBoundsIgnoreFraming, kCGNullWindowID, kCGWindowName
 from AppKit import NSImage, NSBitmapImageRep, NSDeviceRGBColorSpace, NSSize, NSRect, NSZeroPoint, NSZeroRect, NSCompositingOperationCopy, NSGraphicsContext, NSImageInterpolationHigh, NSBitmapImageFileTypeJPEG, NSImageCompressionFactor
 import urllib.request
 from datetime import datetime
+import psutil
 
 
 def request(action, **params):
@@ -115,26 +116,57 @@ def main():
     config = configparser.ConfigParser()
     config.read(config_path)
 
-    if config['config']['second_screen'] == 'true':
-        (err, online_displays, number_of_online_displays) = CoreGraphics.CGGetActiveDisplayList(2, None, None)
-        if number_of_online_displays == 2:
-            if online_displays[0] == CoreGraphics.CGMainDisplayID():
-                display_id = online_displays[1]
-            else:
-                display_id = online_displays[0]
-        else:
-            sys.exit(1)
+    screen_capture_coords = config['config']['screen_capture_coords']
+    if screen_capture_coords == '':
+        screencapture_mode = 0
+    elif len(screen_capture_coords.split(',')) == 4:
+        screencapture_mode = 1
     else:
-        display_id = CoreGraphics.CGMainDisplayID()
+        screencapture_mode = 2
+
+    if screencapture_mode != 2:
+        if config['config']['second_screen'] == 'true':
+            (err, online_displays, number_of_online_displays) = CGGetActiveDisplayList(2, None, None)
+            if number_of_online_displays == 2:
+                if online_displays[0] == CGMainDisplayID():
+                    display_id = online_displays[1]
+                else:
+                    display_id = online_displays[0]
+            else:
+                sys.exit(1)
+        else:
+            display_id = CGMainDisplayID()
 
     time.sleep(float(config['config']['delay']))
 
-    if config['config']['whole_screen'] == 'true':
-        img = CoreGraphics.CGDisplayCreateImage(display_id)
+    if screencapture_mode == 0:
+        img = CGDisplayCreateImage(display_id)
+    elif screencapture_mode == 1:
+        x, y, w, h = [float(c.strip()) for c in screen_capture_coords.split(',')]
+        img = CGDisplayCreateImageForRect(display_id, CGRectMake(x, y, w, h))
     else:
-        coords = config['config']['rectangle_coords']
-        x, y, w, h = [float(x) for x in coords.split(' ')]
-        img = CoreGraphics.CGDisplayCreateImageForRect(display_id, CoreGraphics.CGRectMake(x, y, w, h))
+        window_list = CGWindowListCopyWindowInfo(kCGWindowListExcludeDesktopElements, kCGNullWindowID)
+        window_titles = []
+        window_ids = []
+        window_id = 0
+        for i, window in enumerate(window_list):
+            window_title = window.get(kCGWindowName, '')
+            if psutil.Process(window['kCGWindowOwnerPID']).name() not in ('Terminal', 'iTerm2'):
+                window_titles.append(window_title)
+                window_ids.append(window['kCGWindowNumber'])
+
+        if screen_capture_coords in window_titles:
+            window_id = window_ids[window_titles.index(screen_capture_coords)]
+        else:
+            for t in window_titles:
+                if screen_capture_coords in t:
+                    window_id = window_ids[window_titles.index(t)]
+                    break
+
+        if not window_id:
+            sys.exit(1)
+
+        img = CGWindowListCreateImageFromArray(CGRectNull, [window_id], kCGWindowImageBoundsIgnoreFraming)
 
     ns_imagerep = NSBitmapImageRep.alloc().initWithCGImage_(img)
 
@@ -146,7 +178,7 @@ def main():
     encoded_image = base64.b64encode(jpg_image).decode('ascii')
     filename = 'screenshot-' + datetime.now().strftime('%Y-%m-%d-%H.%M.%S') + '.jpg'
 
-    added_notes = anki_connect('findNotes', query='added:1')
+    added_notes = anki_connect('findNotes', query='added:1 deck:current')
     if len(added_notes) == 0:
         return
     added_notes.sort()
@@ -173,7 +205,7 @@ def main():
     with open('/tmp/last_edited_cards.json', 'w') as fp:
         json.dump(updated_list, fp)
 
-    anki_connect('guiBrowse', query='added:1', reorderCards={'order': 'descending', 'columnId': 'noteCrt'})
+    anki_connect('guiBrowse', query='added:1 deck:current', reorderCards={'order': 'descending', 'columnId': 'noteCrt'})
 
 main()
 EOF"

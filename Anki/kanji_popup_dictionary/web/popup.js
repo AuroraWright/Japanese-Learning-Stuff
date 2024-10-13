@@ -143,14 +143,9 @@ $(document).ready(function () {
     var selection = getSelected();
     term = selection.toString().trim();
 
-    if(term.length == 0){
+    if(term.length == 0 && divid.trim().length !== 0){
       term="useQuestionField";
-      if (divid.trim().length === 0) {
-        tooltip.set("position.target", $('#qa > div'));
-      }
-      else {
-        tooltip.set("position.target", $('#' + divid));
-      }
+      tooltip.set("position.target", $('#' + divid));
       tooltip.set("position.at", "bottom center");
     }
 

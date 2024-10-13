@@ -49,14 +49,16 @@ if ffmpeg_running then
 	else if manageWindows is equal to 2 then
 		tell application "System Events" to key code 124 using control down
 		delay appName2
-	else
+	else if manageWindows is equal to 3 then
 		delay appName2
 	end if
-	tell application "System Events"
-		key down keyCode2
-		delay keyCodeInterval
-		key up keyCode2
-	end tell
+	if manageWindows is not equal to 4 then
+		tell application "System Events"
+			key down keyCode2
+			delay keyCodeInterval
+			key up keyCode2
+		end tell
+	end if
 	set posixFileName to the quoted form of POSIX path of (POSIX file (recordingsFolder & "/" & audioFileName))
 	savetoanki(posixFileName)
 	tell application id (id of application appName) to activate
@@ -71,11 +73,13 @@ else
 	else
 		delay appName2
 	end if
-	tell application "System Events"
-		key down keyCode1
-		delay keyCodeInterval
-		key up keyCode1
-	end tell
+	if manageWindows is not equal to 4 then
+		tell application "System Events"
+			key down keyCode1
+			delay keyCodeInterval
+			key up keyCode1
+		end tell
+	end if
 	delay delayInterval
 	do shell script "echo '' > /tmp/ffmpeg_stop"
 	do shell script "</tmp/ffmpeg_stop /opt/homebrew/bin/ffmpeg -f avfoundation -i ':Studying' -c:a aac_at -aac_at_mode vbr -q:a 8 -f ipod " & quoted form of filename & "> /dev/null 2>&1 &"
@@ -120,7 +124,7 @@ def anki_connect(action, **params):
 def main():
     if len(sys.argv) != 2:
         return
-    added_notes = anki_connect('findNotes', query='added:1')
+    added_notes = anki_connect('findNotes', query='added:1 deck:current')
     if len(added_notes) == 0:
         return
     added_notes.sort()
@@ -152,7 +156,7 @@ def main():
         anki_connect('updateNoteFields', note=note)
         note_index -= 1
 
-    anki_connect('guiBrowse', query='added:1', reorderCards={'order': 'descending', 'columnId': 'noteCrt'})
+    anki_connect('guiBrowse', query='added:1 deck:current', reorderCards={'order': 'descending', 'columnId': 'noteCrt'})
 
     if note_index != -1:
         Popen(f'afplay -t 2 {sys.argv[1]} && rm {sys.argv[1]}', shell=True)
