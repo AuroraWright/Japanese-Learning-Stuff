@@ -202,8 +202,10 @@ def main():
         anki_connect('updateNoteFields', note=note)
         updated_list.append(note_id)
         note_index -= 1
-    with open('/tmp/last_edited_cards.json', 'w') as fp:
-        json.dump(updated_list, fp)
+
+    if len(updated_list) > 0:
+        with open('/tmp/last_edited_cards.json', 'w') as fp:
+            json.dump(updated_list, fp)
 
     anki_connect('guiBrowse', query='added:1 deck:current', reorderCards={'order': 'descending', 'columnId': 'noteCrt'})
 
