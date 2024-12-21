@@ -35,11 +35,14 @@ on screencapture()
     do shell script "/opt/homebrew/bin/python3 <<'EOF' - 
 
 import sys, time, os, configparser, json, base64
-from Quartz import CGGetActiveDisplayList, CGMainDisplayID, CGDisplayCreateImage, CGDisplayCreateImageForRect, CGRectMake, CGRectNull, CGWindowListCopyWindowInfo, CGWindowListCreateImageFromArray, kCGWindowListExcludeDesktopElements, kCGWindowImageBoundsIgnoreFraming, kCGNullWindowID, kCGWindowName
+from Quartz import CGGetActiveDisplayList, CGMainDisplayID, CGRectMake, CGWindowListCopyWindowInfo, kCGWindowListExcludeDesktopElements, kCGNullWindowID, kCGWindowName
 from AppKit import NSImage, NSBitmapImageRep, NSDeviceRGBColorSpace, NSSize, NSRect, NSZeroPoint, NSZeroRect, NSCompositingOperationCopy, NSGraphicsContext, NSImageInterpolationHigh, NSBitmapImageFileTypeJPEG, NSImageCompressionFactor
+from ScreenCaptureKit import SCContentFilter, SCScreenshotManager, SCShareableContent, SCStreamConfiguration, SCCaptureResolutionBest
+import objc
 import urllib.request
 from datetime import datetime
 import psutil
+import queue
 
 
 def request(action, **params):
@@ -59,6 +62,124 @@ def anki_connect(action, **params):
     return response['result']
 
 
+def capture_macos_screenshot(screencapture_mode, window_display_id, screen_capture_coords=None):
+    def shareable_content_completion_handler_display(shareable_content, error):
+        if error:
+            screencapturekit_queue.put(None)
+            return
+
+        target_display = None
+        for display in shareable_content.displays():
+            if display.displayID() == window_display_id:
+                target_display = display
+                break
+
+        if not target_display:
+            screencapturekit_queue.put(None)
+            return
+
+        with objc.autorelease_pool():
+            content_filter = SCContentFilter.alloc().initWithDisplay_excludingApplications_exceptingWindows_(
+                target_display, [], []
+            )
+            configuration = SCStreamConfiguration.alloc().init()
+
+            if screencapture_mode == 0:
+                frame = content_filter.contentRect()
+                width = frame.size.width
+                height = frame.size.height
+            else:
+                x, y, width, height = [float(c.strip()) for c in screen_capture_coords.split(',')]
+                configuration.setSourceRect_(CGRectMake(x, y, width, height))
+
+            scale = content_filter.pointPixelScale()
+            configuration.setWidth_(width * scale)
+            configuration.setHeight_(height * scale)
+            configuration.setShowsCursor_(False)
+            configuration.setCaptureResolution_(SCCaptureResolutionBest)
+
+            SCScreenshotManager.captureImageWithFilter_configuration_completionHandler_(
+                content_filter, configuration, capture_image_completion_handler
+            )
+
+    def shareable_content_completion_handler_window(shareable_content, error):
+        if error:
+            screencapturekit_queue.put(None)
+            return
+
+        target_window = None
+        for window in shareable_content.windows():
+            if window.windowID() == window_display_id:
+                target_window = window
+                break
+
+        if not target_window:
+            screencapturekit_queue.put(None)
+            return
+
+        with objc.autorelease_pool():
+            content_filter = SCContentFilter.alloc().initWithDesktopIndependentWindow_(target_window)
+            configuration = SCStreamConfiguration.alloc().init()
+
+            frame = content_filter.contentRect()
+            if not screen_capture_coords:
+                x = 0
+                y = 0
+                width = frame.size.width
+                height = frame.size.height
+            elif screen_capture_coords == 'menubar':
+                fixed_menubar = False
+                if frame.origin.x == 0:
+                    for display in shareable_content.displays():
+                        display_frame = display.frame()
+                        if display_frame.size.width == frame.size.width and display_frame.size.height == frame.origin.y + frame.size.height:
+                            x = 0
+                            y = frame.origin.y
+                            width = frame.size.width
+                            height = frame.size.height - frame.origin.y
+                            fixed_menubar = True
+                            break
+                if not fixed_menubar:
+                    x = 0
+                    y = 0
+                    width = frame.size.width
+                    height = frame.size.height
+            else:
+                cut_left, cut_right, cut_top, cut_bottom = [float(c.strip()) for c in screen_capture_coords.split(',')]
+                x = cut_left
+                y = cut_top
+                width = frame.size.width - cut_left - cut_right
+                height = frame.size.height - cut_top - cut_bottom
+
+            scale = content_filter.pointPixelScale()
+            configuration.setSourceRect_(CGRectMake(x, y, width, height))
+            configuration.setWidth_(width * scale)
+            configuration.setHeight_(height * scale)
+            configuration.setShowsCursor_(False)
+            configuration.setCaptureResolution_(SCCaptureResolutionBest)
+            configuration.setIgnoreGlobalClipSingleWindow_(True)
+
+            SCScreenshotManager.captureImageWithFilter_configuration_completionHandler_(
+                content_filter, configuration, capture_image_completion_handler
+            )
+
+    def capture_image_completion_handler(image, error):
+        if error:
+            screencapturekit_queue.put(None)
+            return
+
+        screencapturekit_queue.put(image)
+
+    if screencapture_mode == 2:
+        SCShareableContent.getShareableContentWithCompletionHandler_(
+            shareable_content_completion_handler_window
+        )
+    else:
+        SCShareableContent.getShareableContentWithCompletionHandler_(
+            shareable_content_completion_handler_display
+        )
+
+
 def resize_image(original_image_rep, max_width, max_height):
     original_image = NSImage.alloc().init()
     original_image.addRepresentation_(original_image_rep)
@@ -71,7 +192,7 @@ def resize_image(original_image_rep, max_width, max_height):
         max_height = sys.maxsize
 
     if original_width <= max_width and original_height <= max_height:
-        return original_image
+        return original_image_rep
 
     width_ratio = original_width / max_width
     height_ratio = original_height / max_height
@@ -139,11 +260,13 @@ def main():
 
     time.sleep(float(config['config']['delay']))
 
+    global screencapturekit_queue
+    screencapturekit_queue = queue.Queue()
+
     if screencapture_mode == 0:
-        img = CGDisplayCreateImage(display_id)
+        capture_macos_screenshot(0, display_id)
     elif screencapture_mode == 1:
-        x, y, w, h = [float(c.strip()) for c in screen_capture_coords.split(',')]
-        img = CGDisplayCreateImageForRect(display_id, CGRectMake(x, y, w, h))
+        capture_macos_screenshot(1, display_id, screen_capture_coords)
     else:
         window_list = CGWindowListCopyWindowInfo(kCGWindowListExcludeDesktopElements, kCGNullWindowID)
         window_titles = []
@@ -166,9 +289,15 @@ def main():
         if not window_id:
             sys.exit(1)
 
-        img = CGWindowListCreateImageFromArray(CGRectNull, [window_id], kCGWindowImageBoundsIgnoreFraming)
+        CGMainDisplayID()
+        capture_macos_screenshot(2, window_id, config['config']['cutting_coords'])
 
-    ns_imagerep = NSBitmapImageRep.alloc().initWithCGImage_(img)
+    try:
+        cg_image = screencapturekit_queue.get(timeout=0.5)
+    except queue.Empty:
+        sys.exit(1)
+
+    ns_imagerep = NSBitmapImageRep.alloc().initWithCGImage_(cg_image)
 
     if config['config']['resize'] == 'true':
         ns_imagerep = resize_image(ns_imagerep, float(config['config']['max_width']), float(config['config']['max_height']))
