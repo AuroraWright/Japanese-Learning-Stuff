@@ -1,22 +1,28 @@
-set appName to "Anki"
-if application appName is not running then
+if application "Anki" is not running then
 	return
 end if
 
 set configFile to ((path to home folder) & ".config:vnrecordingscript.conf") as string
-set theFileContents to paragraphs of (read file configFile)
-set manageWindows to item 1 of theFileContents as integer
-set appName2 to item 2 of theFileContents as string
-set delayInterval to item 3 of theFileContents as real
-set keyCode1 to item 4 of theFileContents as integer
-set keyCode2 to item 5 of theFileContents as integer
-set keyCodeInterval to item 6 of theFileContents as real
+set fileContents to paragraphs of (read file configFile)
+set ffmpegPath to item 2 of fileContents as string
+set pythonPath to item 4 of fileContents as string
+set virtualDeviceName to item 6 of fileContents as string
+set windowManagementMode to item 8 of fileContents as integer
+set vnApp to item 10 of fileContents as string
+set preKeyCodeDelay to item 12 of fileContents as real
+set preRecordingDelay to item 14 of fileContents as real
+set secondKeyCodeDelay to item 16 of fileContents as real
+set keyCode1 to item 18 of fileContents as integer
+set keyCode2 to item 20 of fileContents as integer
+set keyCode3 to item 22 of fileContents as integer
+set keyCode4 to item 24 of fileContents as integer
+set keyCodeHoldingTime to item 26 of fileContents as real
 
-if manageWindows is equal to 1 then
-	if application appName2 is not running then
+if windowManagementMode is equal to 1 then
+	if application vnApp is not running then
 		set process_running to false
 		try
-			do shell script "/usr/bin/pgrep -q " & appName2
+			do shell script "/usr/bin/pgrep -q " & vnApp
 			set process_running to true
 		end try
 		
@@ -44,45 +50,63 @@ if ffmpeg_running then
 			exit repeat
 		end try
 	end repeat
-	if manageWindows is equal to 1 then
-		tell application id (id of application appName2) to activate
-	else if manageWindows is equal to 2 then
+	if windowManagementMode is equal to 1 then
+		tell application id (id of application vnApp) to activate
+	else if windowManagementMode is equal to 2 then
 		tell application "System Events" to key code 124 using control down
-		delay appName2
-	else if manageWindows is equal to 3 then
-		delay appName2
+		delay vnApp
+	else if windowManagementMode is equal to 3 then
+		delay vnApp
 	end if
-	if manageWindows is not equal to 4 then
+	if windowManagementMode is not equal to 4 then
+		delay preKeyCodeDelay
 		tell application "System Events"
 			key down keyCode2
-			delay keyCodeInterval
+			delay keyCodeHoldingTime
 			key up keyCode2
 		end tell
+		if keyCode4 is not equal to 0 then
+			tell application "System Events"
+				delay secondKeyCodeDelay
+				key down keyCode4
+				delay keyCodeHoldingTime
+				key up keyCode4
+			end tell
+		end if
 	end if
-	set posixFileName to the quoted form of POSIX path of (POSIX file (recordingsFolder & "/" & audioFileName))
-	savetoanki(posixFileName)
-	tell application id (id of application appName) to activate
+	set posixAudioFileName to the quoted form of POSIX path of (POSIX file (recordingsFolder & "/" & audioFileName))
+	savetoanki(pythonPath, posixAudioFileName)
+	tell application id (id of application "Anki") to activate
 else
 	set formattedDate to (do shell script "date +'%Y-%m-%d-%H.%M.%S'")
 	set filename to "/tmp/recording-" & formattedDate & ".m4a"
-	if manageWindows is equal to 1 then
-		tell application id (id of application appName2) to activate
-	else if manageWindows is equal to 2 then
+	if windowManagementMode is equal to 1 then
+		tell application id (id of application vnApp) to activate
+	else if windowManagementMode is equal to 2 then
 		tell application "System Events" to key code 124 using control down
-		delay appName2
+		delay vnApp
 	else
-		delay appName2
+		delay vnApp
 	end if
-	if manageWindows is not equal to 4 then
+	if windowManagementMode is not equal to 4 then
+		delay preKeyCodeDelay
 		tell application "System Events"
 			key down keyCode1
-			delay keyCodeInterval
+			delay keyCodeHoldingTime
 			key up keyCode1
 		end tell
+		if keyCode3 is not equal to 0 then
+			tell application "System Events"
+				delay secondKeyCodeDelay
+				key down keyCode3
+				delay keyCodeHoldingTime
+				key up keyCode3
+			end tell
+		end if
 	end if
-	delay delayInterval
+	delay preRecordingDelay
 	do shell script "echo '' > /tmp/ffmpeg_stop"
-	do shell script "</tmp/ffmpeg_stop /opt/homebrew/bin/ffmpeg -f avfoundation -i ':Studying' -c:a aac_at -aac_at_mode vbr -q:a 8 -f ipod " & quoted form of filename & "> /dev/null 2>&1 &"
+	do shell script "</tmp/ffmpeg_stop " & ffmpegPath & " -f avfoundation -i ':" & virtualDeviceName & "' -c:a aac_at -aac_at_mode vbr -q:a 8 -f ipod " & quoted form of filename & "> /dev/null 2>&1 &"
 	tell application "System Events"
 		repeat
 			if exists file filename then
@@ -93,10 +117,11 @@ else
 		end repeat
 	end tell
 	beep
+	beep
 end if
 
-on savetoanki(posixFileName)
-    do shell script "/opt/homebrew/bin/python3 <<'EOF' - " & posixFileName & "
+on savetoanki(pythonPath, fileName)
+    do shell script pythonPath & " <<'EOF' - " & fileName & "
 
 import sys, json, os
 from subprocess import Popen

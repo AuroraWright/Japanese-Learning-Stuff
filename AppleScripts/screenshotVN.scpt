@@ -1,18 +1,18 @@
-set appName to "Anki"
-if application appName is not running then
+if application "Anki" is not running then
     return
 end if
 
 set configFile to ((path to home folder) & ".config:vnscreenshotscript.conf") as string
-set theFileContents to paragraphs of (read file configFile)
-set manageWindows to item 1 of theFileContents as integer
-set appName2 to item 2 of theFileContents as string
+set fileContents to paragraphs of (read file configFile)
+set pythonPath to item 2 of fileContents as string
+set windowManagementMode to item 4 of fileContents as integer
+set vnApp to item 6 of fileContents as string
 
-if manageWindows is equal to 1 then
-    if application appName2 is not running then
+if windowManagementMode is equal to 1 then
+    if application vnApp is not running then
         set process_running to false
         try
-            do shell script "/usr/bin/pgrep -q " & appName2
+            do shell script "/usr/bin/pgrep -q " & vnApp
             set process_running to true
         end try
 
@@ -20,22 +20,20 @@ if manageWindows is equal to 1 then
             return
         end if
     end if
-    tell application id (id of application appName2) to activate
-else if manageWindows is equal to 2 then
+    tell application id (id of application vnApp) to activate
+else if windowManagementMode is equal to 2 then
     tell application "System Events" to key code 124 using control down
-else
-    delay appName2
 end if
 
-screencapture()
+screencapture(pythonPath)
 
-tell application id (id of application appName) to activate
+tell application id (id of application "Anki") to activate
 
-on screencapture()
-    do shell script "/opt/homebrew/bin/python3 <<'EOF' - 
+on screencapture(pythonPath)
+    do shell script pythonPath & " <<'EOF' - 
 
 import sys, time, os, configparser, json, base64
-from Quartz import CGGetActiveDisplayList, CGMainDisplayID, CGRectMake, CGWindowListCopyWindowInfo, kCGWindowListExcludeDesktopElements, kCGNullWindowID, kCGWindowName
+from Quartz import CGGetActiveDisplayList, CGMainDisplayID, CGDisplayCreateImage, CGDisplayCreateImageForRect, CGImageCreateWithImageInRect, CGImageGetWidth, CGImageGetHeight, CGRectMake, CGRectNull, CGWindowListCopyWindowInfo, CGWindowListCreateImageFromArray, kCGWindowListExcludeDesktopElements, kCGWindowImageBoundsIgnoreFraming, kCGNullWindowID, kCGWindowName
 from AppKit import NSImage, NSBitmapImageRep, NSDeviceRGBColorSpace, NSSize, NSRect, NSZeroPoint, NSZeroRect, NSCompositingOperationCopy, NSGraphicsContext, NSImageInterpolationHigh, NSBitmapImageFileTypeJPEG, NSImageCompressionFactor
 from ScreenCaptureKit import SCContentFilter, SCScreenshotManager, SCShareableContent, SCStreamConfiguration, SCCaptureResolutionBest
 import objc
@@ -62,7 +60,7 @@ def anki_connect(action, **params):
     return response['result']
 
 
-def capture_macos_screenshot(screencapture_mode, window_display_id, screen_capture_coords=None):
+def capture_macos_screenshot(screencapture_mode, window_display_id, coords=None, titlebar_coords=None):
     def shareable_content_completion_handler_display(shareable_content, error):
         if error:
             screencapturekit_queue.put(None)
@@ -89,7 +87,7 @@ def capture_macos_screenshot(screencapture_mode, window_display_id, screen_captu
                 width = frame.size.width
                 height = frame.size.height
             else:
-                x, y, width, height = [float(c.strip()) for c in screen_capture_coords.split(',')]
+                x, y, width, height = [float(c.strip()) for c in coords.split(',')]
                 configuration.setSourceRect_(CGRectMake(x, y, width, height))
 
             scale = content_filter.pointPixelScale()
@@ -122,34 +120,23 @@ def capture_macos_screenshot(screencapture_mode, window_display_id, screen_captu
             configuration = SCStreamConfiguration.alloc().init()
 
             frame = content_filter.contentRect()
-            if not screen_capture_coords:
-                x = 0
-                y = 0
-                width = frame.size.width
-                height = frame.size.height
-            elif screen_capture_coords == 'menubar':
-                fixed_menubar = False
-                if frame.origin.x == 0:
-                    for display in shareable_content.displays():
-                        display_frame = display.frame()
-                        if display_frame.size.width == frame.size.width and display_frame.size.height == frame.origin.y + frame.size.height:
-                            x = 0
-                            y = frame.origin.y
-                            width = frame.size.width
-                            height = frame.size.height - frame.origin.y
-                            fixed_menubar = True
-                            break
-                if not fixed_menubar:
-                    x = 0
-                    y = 0
-                    width = frame.size.width
-                    height = frame.size.height
-            else:
-                cut_left, cut_right, cut_top, cut_bottom = [float(c.strip()) for c in screen_capture_coords.split(',')]
-                x = cut_left
-                y = cut_top
-                width = frame.size.width - cut_left - cut_right
-                height = frame.size.height - cut_top - cut_bottom
+            x = 0
+            y = 0
+            width = frame.size.width
+            height = frame.size.height
+            if titlebar_coords:
+                for display in shareable_content.displays():
+                    display_frame = display.frame()
+                    if display_frame.size.width == frame.size.width and display_frame.size.height + display_frame.origin.y == frame.origin.y + frame.size.height:
+                        y, cut_top = [float(c.strip()) for c in titlebar_coords.split(',')]
+                        height -= cut_top
+                        break
+            if coords:
+                cut_left, cut_right, cut_top, cut_bottom = [float(c.strip()) for c in coords.split(',')]
+                x += cut_left
+                y += cut_top
+                width -= cut_left + cut_right
+                height -= cut_top + cut_bottom
 
             scale = content_filter.pointPixelScale()
             configuration.setSourceRect_(CGRectMake(x, y, width, height))
@@ -231,6 +218,24 @@ def resize_image(original_image_rep, max_width, max_height):
     return resized_image
 
 
+def crop_image(image, cutting_coords):
+    width = CGImageGetWidth(image)
+    height = CGImageGetHeight(image)
+
+    cut_left, cut_right, cut_top, cut_bottom = [float(c.strip()) for c in cutting_coords.split(',')]
+    x = cut_left
+    y = cut_top
+    width = width - cut_left - cut_right
+    height = height - cut_top - cut_bottom
+
+    if width <= 0 or height <= 0:
+        return image
+
+    cropped_image = CGImageCreateWithImageInRect(image, CGRectMake(x, y, width, height))
+
+    return cropped_image
+
+
 def main():
     home_path = os.path.expanduser('~')
     config_path = os.path.join(home_path,'.config','vnscreenshotscript.ini')
@@ -260,14 +265,7 @@ def main():
 
     time.sleep(float(config['config']['delay']))
 
-    global screencapturekit_queue
-    screencapturekit_queue = queue.Queue()
-
-    if screencapture_mode == 0:
-        capture_macos_screenshot(0, display_id)
-    elif screencapture_mode == 1:
-        capture_macos_screenshot(1, display_id, screen_capture_coords)
-    else:
+    if screencapture_mode == 2:
         window_list = CGWindowListCopyWindowInfo(kCGWindowListExcludeDesktopElements, kCGNullWindowID)
         window_titles = []
         window_ids = []
@@ -289,13 +287,33 @@ def main():
         if not window_id:
             sys.exit(1)
 
-        CGMainDisplayID()
-        capture_macos_screenshot(2, window_id, config['config']['cutting_coords'])
+    if config['config']['old_api'] == 'true':
+        if screencapture_mode == 0:
+            cg_image = CGDisplayCreateImage(display_id)
+        elif screencapture_mode == 1:
+            x, y, w, h = [float(c.strip()) for c in screen_capture_coords.split(',')]
+            cg_image = CGDisplayCreateImageForRect(display_id, CGRectMake(x, y, w, h))
+        else:
+            cg_image = CGWindowListCreateImageFromArray(CGRectNull, [window_id], kCGWindowImageBoundsIgnoreFraming)
+            cutting_coords = config['config']['cutting_coords']
+            if cutting_coords:
+                cg_image = crop_image(cg_image, cutting_coords)
+    else:
+        global screencapturekit_queue
+        screencapturekit_queue = queue.Queue()
 
-    try:
-        cg_image = screencapturekit_queue.get(timeout=0.5)
-    except queue.Empty:
-        sys.exit(1)
+        if screencapture_mode == 0:
+            capture_macos_screenshot(0, display_id)
+        elif screencapture_mode == 1:
+            capture_macos_screenshot(1, display_id, screen_capture_coords)
+        else:
+            CGMainDisplayID()
+            capture_macos_screenshot(2, window_id, config['config']['cutting_coords'], config['config']['titlebar_coords'])
+
+        try:
+            cg_image = screencapturekit_queue.get(timeout=0.5)
+        except queue.Empty:
+            sys.exit(1)
 
     ns_imagerep = NSBitmapImageRep.alloc().initWithCGImage_(cg_image)
 
