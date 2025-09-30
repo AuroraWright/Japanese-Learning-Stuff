@@ -17,6 +17,7 @@ set keyCode2 to item 20 of fileContents as integer
 set keyCode3 to item 22 of fileContents as integer
 set keyCode4 to item 24 of fileContents as integer
 set keyCodeHoldingTime to item 26 of fileContents as real
+set ankiFieldName to item 28 of fileContents as string
 
 if windowManagementMode is equal to 1 then
 	if application vnApp is not running then
@@ -75,7 +76,7 @@ if ffmpeg_running then
 		end if
 	end if
 	set posixAudioFileName to the quoted form of POSIX path of (POSIX file (recordingsFolder & "/" & audioFileName))
-	savetoanki(pythonPath, posixAudioFileName)
+	savetoanki(pythonPath, posixAudioFileName, ankiFieldName)
 	tell application id (id of application "Anki") to activate
 else
 	set formattedDate to (do shell script "date +'%Y-%m-%d-%H.%M.%S'")
@@ -120,8 +121,8 @@ else
 	beep
 end if
 
-on savetoanki(pythonPath, fileName)
-    do shell script pythonPath & " <<'EOF' - " & fileName & "
+on savetoanki(pythonPath, fileName, ankiFieldName)
+    do shell script pythonPath & " <<'EOF' - " & fileName & " " & ankiFieldName & "
 
 import sys, json, os
 from subprocess import Popen
@@ -147,7 +148,7 @@ def anki_connect(action, **params):
 
 
 def main():
-    if len(sys.argv) != 2:
+    if len(sys.argv) != 3:
         return
     added_notes = anki_connect('findNotes', query='added:1 deck:current')
     if len(added_notes) == 0:
@@ -162,6 +163,7 @@ def main():
         return
     anki_connect('guiBrowse', query='nid:1')
     note_index = -1
+    field_name = sys.argv[2]
     while True:
         if abs(note_index) > len(added_notes):
             break
@@ -169,13 +171,13 @@ def main():
         if not note_id in updated_list:
             break
         note_data = anki_connect('notesInfo', notes=[note_id])
-        if note_data[0]['fields']['SentenceAudio']['value'] != '':
+        if note_data[0]['fields'][field_name]['value'] != '':
             break
         note = {'id': note_id, 
                 'fields': {},
                 'audio': {'filename': os.path.basename(sys.argv[1]),
                           'path': sys.argv[1],
-                          'fields': ['SentenceAudio']
+                          'fields': [field_name]
                          }
                }
         anki_connect('updateNoteFields', note=note)

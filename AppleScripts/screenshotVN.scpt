@@ -324,6 +324,7 @@ def main():
     jpg_image = ns_imagerep.representationUsingType_properties_(NSBitmapImageFileTypeJPEG, options)
     encoded_image = base64.b64encode(jpg_image).decode('ascii')
     filename = 'screenshot-' + datetime.now().strftime('%Y-%m-%d-%H.%M.%S') + '.jpg'
+    field_name = config['config']['field_name']
 
     added_notes = anki_connect('findNotes', query='added:1 deck:current')
     if len(added_notes) == 0:
@@ -337,13 +338,13 @@ def main():
             break
         note_id = added_notes[note_index]
         note_data = anki_connect('notesInfo', notes=[note_id])
-        if note_data[0]['fields']['Picture']['value'] != '':
+        if note_data[0]['fields'][field_name]['value'] != '':
             break
         note = {'id': note_id, 
                 'fields': {},
                 'picture': {'filename': filename,
                             'data': encoded_image,
-                            'fields': ['Picture']
+                            'fields': [field_name]
                            }
                }
         anki_connect('updateNoteFields', note=note)
