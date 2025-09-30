@@ -34,12 +34,11 @@ on screencapture(pythonPath)
 
 import sys, time, os, configparser, json, base64
 from Quartz import CGGetActiveDisplayList, CGMainDisplayID, CGDisplayCreateImage, CGDisplayCreateImageForRect, CGImageCreateWithImageInRect, CGImageGetWidth, CGImageGetHeight, CGRectMake, CGRectNull, CGWindowListCopyWindowInfo, CGWindowListCreateImageFromArray, kCGWindowListExcludeDesktopElements, kCGWindowImageBoundsIgnoreFraming, kCGNullWindowID, kCGWindowName
-from AppKit import NSImage, NSBitmapImageRep, NSDeviceRGBColorSpace, NSSize, NSRect, NSZeroPoint, NSZeroRect, NSCompositingOperationCopy, NSGraphicsContext, NSImageInterpolationHigh, NSBitmapImageFileTypeJPEG, NSImageCompressionFactor
+from AppKit import NSImage, NSBitmapImageRep, NSDeviceRGBColorSpace, NSSize, NSRect, NSZeroPoint, NSZeroRect, NSCompositingOperationCopy, NSGraphicsContext, NSImageInterpolationHigh, NSBitmapImageFileTypeJPEG, NSImageCompressionFactor, NSRunningApplication
 from ScreenCaptureKit import SCContentFilter, SCScreenshotManager, SCShareableContent, SCStreamConfiguration, SCCaptureResolutionBest
 import objc
 import urllib.request
 from datetime import datetime
-import psutil
 import queue
 
 
@@ -271,10 +270,13 @@ def main():
         window_ids = []
         window_id = 0
         for i, window in enumerate(window_list):
+            owner_app = NSRunningApplication.runningApplicationWithProcessIdentifier_(window['kCGWindowOwnerPID'])
+            if owner_app and owner_app.bundleIdentifier() in ('com.apple.Terminal', 'com.googlecode.iterm2'):
+                continue
+
             window_title = window.get(kCGWindowName, '')
-            if psutil.Process(window['kCGWindowOwnerPID']).name() not in ('Terminal', 'iTerm2'):
-                window_titles.append(window_title)
-                window_ids.append(window['kCGWindowNumber'])
+            window_titles.append(window_title)
+            window_ids.append(window['kCGWindowNumber'])
 
         if screen_capture_coords in window_titles:
             window_id = window_ids[window_titles.index(screen_capture_coords)]
