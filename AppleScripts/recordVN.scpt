@@ -79,6 +79,9 @@ if ffmpeg_running then
 	savetoanki(pythonPath, posixAudioFileName, ankiFieldName)
 	tell application id (id of application "Anki") to activate
 else
+	tell application "System Events"
+		tell the folder "/private/tmp" to delete (files whose name starts with "recording-")
+	end tell
 	set formattedDate to (do shell script "date +'%Y-%m-%d-%H.%M.%S'")
 	set filename to "/tmp/recording-" & formattedDate & ".m4a"
 	if windowManagementMode is equal to 1 then
@@ -107,7 +110,7 @@ else
 	end if
 	delay preRecordingDelay
 	do shell script "echo '' > /tmp/ffmpeg_stop"
-	do shell script "</tmp/ffmpeg_stop " & ffmpegPath & " -f avfoundation -i ':" & virtualDeviceName & "' -c:a aac_at -aac_at_mode vbr -q:a 8 -f ipod " & quoted form of filename & "> /dev/null 2>&1 &"
+	do shell script "</tmp/ffmpeg_stop " & ffmpegPath & " -f avfoundation -i ':" & virtualDeviceName & "' -c:a aac_at -aac_at_mode vbr -q:a 8 -f ipod -t 120 " & quoted form of filename & "> /dev/null 2>&1 &"
 	tell application "System Events"
 		repeat
 			if exists file filename then
@@ -147,19 +150,29 @@ def anki_connect(action, **params):
     return response['result']
 
 
+def delete():
+    try:
+        os.remove(sys.argv[1])
+    except OSError:
+        pass
+
+
 def main():
     if len(sys.argv) != 3:
         return
     added_notes = anki_connect('findNotes', query='added:1 deck:current')
     if len(added_notes) == 0:
+        delete()
         return
     added_notes.sort()
     try:
         with open('/tmp/last_edited_cards.json', 'rb') as fp:
             updated_list = json.load(fp)
     except IOError:
+        delete()
         return
     if len(updated_list) == 0:
+        delete()
         return
     anki_connect('guiBrowse', query='nid:1')
     note_index = -1
@@ -189,10 +202,7 @@ def main():
         Popen(f'afplay -t 2 {sys.argv[1]} && rm {sys.argv[1]}', shell=True)
         signal.signal(signal.SIGCHLD, signal.SIG_IGN)
     else:
-        try:
-            os.remove(sys.argv[1])
-        except OSError:
-            pass
+        delete()
 
 main()
 EOF"
