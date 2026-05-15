@@ -17,7 +17,8 @@ set keyCode2 to item 20 of fileContents as integer
 set keyCode3 to item 22 of fileContents as integer
 set keyCode4 to item 24 of fileContents as integer
 set keyCodeHoldingTime to item 26 of fileContents as real
-set ankiFieldName to item 28 of fileContents as string
+set ankiDeckName to item 28 of fileContents as string
+set ankiFieldName to item 30 of fileContents as string
 
 if windowManagementMode is equal to 1 then
 	if application vnApp is not running then
@@ -76,7 +77,7 @@ if ffmpeg_running then
 		end if
 	end if
 	set posixAudioFileName to the quoted form of POSIX path of (POSIX file (recordingsFolder & "/" & audioFileName))
-	savetoanki(pythonPath, posixAudioFileName, ankiFieldName)
+	savetoanki(pythonPath, posixAudioFileName, ankiDeckName, ankiFieldName)
 	tell application id (id of application "Anki") to activate
 else
 	tell application "System Events"
@@ -124,8 +125,8 @@ else
 	beep
 end if
 
-on savetoanki(pythonPath, fileName, ankiFieldName)
-    do shell script pythonPath & " <<'EOF' - " & fileName & " " & ankiFieldName & "
+on savetoanki(pythonPath, fileName, ankiDeckName, ankiFieldName)
+    do shell script pythonPath & " <<'EOF' - " & fileName & " " & ankiDeckName & " " & ankiFieldName & "
 
 import sys, json, os
 from subprocess import Popen
@@ -158,9 +159,9 @@ def delete():
 
 
 def main():
-    if len(sys.argv) != 3:
+    if len(sys.argv) != 4:
         return
-    added_notes = anki_connect('findNotes', query='added:1 deck:current')
+    added_notes = anki_connect('findNotes', query=f'added:1 deck:{sys.argv[2]}')
     if len(added_notes) == 0:
         delete()
         return
@@ -176,7 +177,7 @@ def main():
         return
     anki_connect('guiBrowse', query='nid:1')
     note_index = -1
-    field_name = sys.argv[2]
+    field_name = sys.argv[3]
     while True:
         if abs(note_index) > len(added_notes):
             break
@@ -196,7 +197,7 @@ def main():
         anki_connect('updateNoteFields', note=note)
         note_index -= 1
 
-    anki_connect('guiBrowse', query='added:1 deck:current', reorderCards={'order': 'descending', 'columnId': 'noteCrt'})
+    anki_connect('guiBrowse', query=f'added:1 deck:{sys.argv[2]}', reorderCards={'order': 'descending', 'columnId': 'noteCrt'})
 
     if note_index != -1:
         Popen(f'afplay -t 2 {sys.argv[1]} && rm {sys.argv[1]}', shell=True)

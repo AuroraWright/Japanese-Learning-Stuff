@@ -326,9 +326,10 @@ def main():
     jpg_image = ns_imagerep.representationUsingType_properties_(NSBitmapImageFileTypeJPEG, options)
     encoded_image = base64.b64encode(jpg_image).decode('ascii')
     filename = 'screenshot-' + datetime.now().strftime('%Y-%m-%d-%H.%M.%S') + '.jpg'
+    deck_name = config['config']['deck_name']
     field_name = config['config']['field_name']
 
-    added_notes = anki_connect('findNotes', query='added:1 deck:current')
+    added_notes = anki_connect('findNotes', query=f'added:1 deck:{deck_name}')
     if len(added_notes) == 0:
         return
     added_notes.sort()
@@ -357,7 +358,7 @@ def main():
         with open('/tmp/last_edited_cards.json', 'w') as fp:
             json.dump(updated_list, fp)
 
-    anki_connect('guiBrowse', query='added:1 deck:current', reorderCards={'order': 'descending', 'columnId': 'noteCrt'})
+    anki_connect('guiBrowse', query=f'added:1 deck:{deck_name}', reorderCards={'order': 'descending', 'columnId': 'noteCrt'})
 
 main()
 EOF"

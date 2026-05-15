@@ -31,7 +31,8 @@ def send_img(img):
     try:
         with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as s:
             s.connect('/tmp/owocr.sock')
-            s.sendall(len(img).to_bytes(4))
+            s.sendall(b'IMG_SIZE')
+            s.sendall(len(img).to_bytes(8))
             s.sendall(img)
             response = s.recv(5)
         return response.decode() == 'True'
